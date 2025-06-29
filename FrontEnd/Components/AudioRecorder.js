@@ -1,3 +1,6 @@
+//Initial code for a React Native audio recording and uploading component using Expo Audio and DocumentPicker
+
+
 // import React, { useState, useRef } from 'react';
 // import { View, Button, Text, StyleSheet } from 'react-native';
 // import { Audio } from 'expo-av';
