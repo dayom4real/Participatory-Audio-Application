@@ -2188,6 +2188,8 @@
 
 
 
+// Clean AudioRecorder.js with improved UI, dark theme, waveform, animated timer, and download option
+
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
