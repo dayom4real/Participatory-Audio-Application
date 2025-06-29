@@ -1,0 +1,46 @@
+# Node / Expo
+FrontEnd/node_modules/
+.expo/
+.expo-shared/
+*.log
+*.expo
+*.zip
+*.dll
+*.Lib
+*.wav
+
+# iOS / Android / Build
+ios/
+android/
+*.apk
+*.ipa
+dist/
+build/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+env/
+venv/
+PCP/Lib/
+PCP/Scripts/
+*.pkl
+
+# Audio files (recordings, uploads)
+uploads/
+*.m4a
+*.webm
+*.mp3
+BackEnd/audio/
+BackEnd/uploads/
+
+# System / Editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Environment
+.env
+.env.*
