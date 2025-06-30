@@ -2212,7 +2212,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 import LottieView from 'lottie-react-native';
-import * as FileSystem from "expo-file-system";
+
 
 const AudioRecorder = () => {
   const [mode, setMode] = useState(null);
