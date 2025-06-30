@@ -2347,31 +2347,37 @@ const AudioRecorder = () => {
 
 
 
-
-
 const uploadAudio = async () => {
-  if (!audioUri) {
+  const fileUri = recordedURI || selectedFile?.uri;
+
+  if (!fileUri) {
     alert("No audio file selected or recorded.");
     return;
   }
 
-  console.log("Audio URI:", audioUri);
+  const fileName = fileUri.split('/').pop();
+  const fileType = fileName.endsWith('.m4a') ? 'audio/m4a' :
+                   fileName.endsWith('.mp3') ? 'audio/mp3' :
+                   fileName.endsWith('.wav') ? 'audio/wav' :
+                   'audio/webm'; // fallback
+
+  console.log("Uploading file:", fileName, "of type", fileType);
 
   const formData = new FormData();
   formData.append("file", {
-    uri: audioUri,
-    name: "audio.webm",         // Important: must match backend expected name
-    type: "audio/webm",         // Also adjust if you're recording mp3/m4a/etc
+    uri: fileUri,
+    name: fileName,
+    type: fileType,
   });
-  formData.append("user_id", "Oludare");
-  formData.append("language", "en");
+  formData.append("user_id", userTag || "Anonymous");
+  formData.append("language", language || "en");
 
   try {
     const response = await fetch("http://192.168.42.183:8000/upload-audio", {
+      
       method: "POST",
       body: formData,
       headers: {
-        // DO NOT manually set Content-Type — fetch handles it for FormData
         Accept: "application/json",
       },
     });
@@ -2383,8 +2389,9 @@ const uploadAudio = async () => {
       throw new Error(`Server responded with status ${response.status}`);
     }
 
-    if (result.transcript_id) {
-      alert("Transcript ID: " + result.transcript_id);
+    if (result.transcript_id || result.transcription || result.text) {
+      alert("Upload successful. Transcript ID: " + (result.transcript_id || 'N/A'));
+      setTranscription(result.transcription || result.text || '');
     } else {
       alert("Upload succeeded, but no transcript ID returned.");
     }
@@ -2393,6 +2400,7 @@ const uploadAudio = async () => {
     alert("Upload failed: " + err.message);
   }
 };
+
 
 
   const resetSession = async () => {
