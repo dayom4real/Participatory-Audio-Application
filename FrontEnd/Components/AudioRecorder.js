@@ -2193,6 +2193,8 @@
 
 // Clean AudioRecorder.js with improved UI, dark theme, waveform, animated timer, and download option
 
+// AudioRecorder.js
+
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -2214,6 +2216,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import LottieView from 'lottie-react-native';
 
 
+
 const AudioRecorder = () => {
   const [mode, setMode] = useState(null);
   const [recording, setRecording] = useState(null);
@@ -2228,6 +2231,7 @@ const AudioRecorder = () => {
   const [timer, setTimer] = useState(null);
   const [isPaused, setIsPaused] = useState(false);
   const recordingRef = useRef(null);
+  const navigation = useNavigation();
 
   useEffect(() => {
     setMode(null);
@@ -2322,142 +2326,61 @@ const AudioRecorder = () => {
     }
   };
 
+  const uploadAudio = async () => {
+    setLoading(true);
+    const fileUri = recordedURI || selectedFile?.uri;
 
+    if (!fileUri) {
+      alert("No audio file selected or recorded.");
+      return;
+    }
 
-  // const uploadAudio = async () => {
-  //   setLoading(true);
-  //   const fileUri = recordedURI || selectedFile?.uri;
-  //   if (!fileUri) return;
+    const fileName = fileUri.split('/').pop();
+    const fileType = fileName.endsWith('.m4a') ? 'audio/m4a' :
+                     fileName.endsWith('.mp3') ? 'audio/mp3' :
+                     fileName.endsWith('.wav') ? 'audio/wav' :
+                     'audio/webm'; // fallback
 
-  //   const formData = new FormData();
-  //   formData.append('file', { uri: fileUri, name: fileUri.split('/').pop(), type: 'audio/m4a' });
-  //   formData.append('user_id', userTag);
-  //   formData.append('language', language);
+    console.log("Uploading file:", fileName, "of type", fileType);
 
-  //   try {
-  //     const response = await fetch('http://127.0.0.1:8000/upload-audio', { method: 'POST', body: formData });
-  //     const data = await response.json();
-  //     setTranscription(data.transcription || data.text || '');
-  //   } catch (err) {
-  //     setTranscription('Upload failed: ' + err.message);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-
-
-const uploadAudio = async () => {
-   setLoading(true);
-  const fileUri = recordedURI || selectedFile?.uri;
-
-  if (!fileUri) {
-    alert("No audio file selected or recorded.");
-    return;
-  }
-
-  const fileName = fileUri.split('/').pop();
-  const fileType = fileName.endsWith('.m4a') ? 'audio/m4a' :
-                   fileName.endsWith('.mp3') ? 'audio/mp3' :
-                   fileName.endsWith('.wav') ? 'audio/wav' :
-                   'audio/webm'; // fallback
-
-  console.log("Uploading file:", fileName, "of type", fileType);
-
-  const formData = new FormData();
-  formData.append("file", {
-    uri: fileUri,
-    name: fileName,
-    type: fileType,
-  });
-  formData.append("user_id", userTag || "Anonymous");
-  formData.append("language", language || "en");
-
-  //192.168.15.249
-  //192.168.42.183
-  try {
-    const response = await fetch("http://192.168.42.183:8000/upload-audio", {
-      method: "POST",
-      body: formData,
-      headers: {
-        Accept: "application/json",
-      },
+    const formData = new FormData();
+    formData.append("file", {
+      uri: fileUri,
+      name: fileName,
+      type: fileType,
     });
+    formData.append("user_id", userTag || "Anonymous");
+    formData.append("language", language || "en");
 
-    const result = await response.json();
-    console.log("Upload result:", result);
+    try {
+      const response = await fetch("http://192.168.42.183:8000/upload-audio", {
+        method: "POST",
+        body: formData,
+        headers: {
+          Accept: "application/json",
+        },
+      });
 
-    if (!response.ok) {
-      throw new Error(`Server responded with status ${response.status}`);
-    }
+      const result = await response.json();
+      console.log("Upload result:", result);
 
-    if (result.transcript_id || result.transcription || result.text) {
-      alert("Upload successful. Transcript ID: " + (result.transcript_id || 'N/A'));
-      setTranscription(result.transcription || result.text || '');
-    } else {
-      alert("Upload succeeded, but no transcript ID returned.");
-    }
-  } catch (err) {
-    console.error("Upload failed:", err);
-    alert("Upload failed: " + err.message);
-  }
-  finally {
+      if (!response.ok) {
+        throw new Error(`Server responded with status ${response.status}`);
+      }
+
+      if (result.transcript_id || result.transcription || result.text) {
+        alert("Upload successful. Transcript ID: " + (result.transcript_id || 'N/A'));
+        setTranscription(result.transcription || result.text || '');
+      } else {
+        alert("Upload succeeded, but no transcript ID returned.");
+      }
+    } catch (err) {
+      console.error("Upload failed:", err);
+      alert("Upload failed: " + err.message);
+    } finally {
       setLoading(false);
     }
-};
-
-
-// const uploadAudio = async () => {
-//   const fileUri = recordedURI || selectedFile?.uri;
-//   if (!fileUri) {
-//     alert("No audio file selected or recorded.");
-//     return;
-//   }
-
-//   const filename = fileUri.split("/").pop();
-//   const fileType = filename.endsWith(".m4a") ? "audio/m4a" : "audio/webm"; // adjust as needed
-
-//   console.log("Uploading file:", filename, "of type", fileType);
-
-//   const formData = new FormData();
-//   formData.append("file", {
-//     uri: fileUri,
-//     name: filename,
-//     type: fileType,
-//   });
-//   formData.append("user_id", userTag || "Oludare");
-//   formData.append("language", language || "en");
-
-//   try {
-//     setLoading(true);
-//     const response = await fetch("http://192.168.42.183:8000/upload-audio", {
-//       method: "POST",
-//       body: formData,
-//       headers: {
-//         Accept: "application/json",
-//       },
-//     });
-
-//     const result = await response.json();
-//     console.log("Upload result:", result);
-
-//     if (!response.ok) {
-//       throw new Error(`Server responded with status ${response.status}`);
-//     }
-
-//     if (result.transcription) {
-//       setTranscription(result.transcription);
-//       alert("Upload succeeded!");
-//     } else {
-//       alert("Upload succeeded, but no transcription returned.");
-//     }
-//   } catch (err) {
-//     console.error("Upload failed:", err);
-//     alert("Upload failed: " + err.message);
-//   } finally {
-//     setLoading(false);
-//   }
-// };
+  };
 
   const resetSession = async () => {
     if (recordingRef.current) {
@@ -2495,11 +2418,7 @@ const uploadAudio = async () => {
         <Text style={styles.exitText}>✖</Text>
       </TouchableOpacity>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        
         <Text style={styles.title}> INCIO Participatory Application</Text>
-
-
-        
 
         {!mode ? (
           <View style={styles.modeBox}>
@@ -2554,6 +2473,13 @@ const uploadAudio = async () => {
                 <TouchableOpacity onPress={playSound} style={styles.button}><Text style={styles.buttonText}>▶ Play</Text></TouchableOpacity>
                 <TouchableOpacity onPress={stopPlayback} style={styles.button}><Text style={styles.buttonText}>⏹ Stop</Text></TouchableOpacity>
                 <TouchableOpacity onPress={uploadAudio} style={styles.uploadButton}><Text style={styles.buttonText}>⬆ Upload</Text></TouchableOpacity>
+
+                {/* ✅ New Result Viewer Button */}
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('ResultViewer')}
+                  style={[styles.uploadButton, { backgroundColor: '#28a745' }]}>
+                  <Text style={styles.buttonText}>📊 View Results</Text>
+                </TouchableOpacity>
               </>
             )}
 
@@ -2597,8 +2523,9 @@ const styles = StyleSheet.create({
   recordBox: { alignItems: 'center', marginTop: 20 },
   transcriptionBox: { backgroundColor: '#1e1e1e', borderRadius: 8, padding: 15, marginTop: 20 },
   transcription: { color: '#ccc', marginTop: 10 },
-  fileName: { color: '#bbb', fontSize: 14, marginBottom: 10 }
+  fileName: { color: '#bbb', fontSize: 14, marginBottom: 10 },
+  headerContainer: { padding: 20, alignItems: 'center' },
+  header: { fontSize: 24, fontWeight: 'bold', color: '#fff', textAlign: 'center', marginBottom: 10 }
 });
 
 export default AudioRecorder;
-

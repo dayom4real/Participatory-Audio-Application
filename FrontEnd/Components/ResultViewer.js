@@ -1,86 +1,71 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View, Text, StyleSheet, Picker, ActivityIndicator, ScrollView
-} from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Picker, ScrollView } from 'react-native';
 
 const ResultViewer = () => {
-  const [loading, setLoading] = useState(false);
   const [transcripts, setTranscripts] = useState([]);
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedId, setSelectedId] = useState('');
   const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
 
+  // Fetch list of transcripts
   useEffect(() => {
-    fetchTranscripts();
+    fetch('http://YOUR_SERVER_URL_HERE/transcripts') // Replace with actual endpoint
+      .then(res => res.json())
+      .then(data => setTranscripts(data))
+      .catch(err => console.error('Failed to fetch transcript list:', err));
   }, []);
 
-  const fetchTranscripts = async () => {
-    try {
-      const res = await fetch('http://YOUR_SERVER_IP:8000/transcripts');
-      const data = await res.json();
-      const options = data.map(item => ({
-        id: item.transcript_id,
-        tag: item.user_id,
-        label: `${item.user_id} (${item.transcript_id})`
-      }));
-      setTranscripts(options);
-    } catch (err) {
-      console.error('Error fetching transcripts:', err);
-    }
-  };
-
-  const fetchResult = async (id) => {
+  // Fetch result when a transcript is selected
+  useEffect(() => {
+    if (!selectedId) return;
     setLoading(true);
-    try {
-      const res = await fetch(`http://YOUR_SERVER_IP:8000/transcripts/${id}`);
-      const data = await res.json();
-      setResult(data);
-    } catch (err) {
-      console.error('Error fetching result:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSelect = (value) => {
-    setSelectedId(value);
-    if (value) fetchResult(value);
-  };
+    fetch(`http://YOUR_SERVER_URL_HERE/results/${selectedId}`)
+      .then(res => res.json())
+      .then(data => setResult(data))
+      .catch(err => console.error('Failed to fetch result:', err))
+      .finally(() => setLoading(false));
+  }, [selectedId]);
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>📊 View Transcription Results</Text>
+    <ScrollView style={styles.container}>
+      <Text style={styles.title}>📊 Result Viewer</Text>
+
       <Text style={styles.label}>Select Transcript</Text>
-      <View style={styles.dropdown}>
+      <View style={styles.pickerWrapper}>
         <Picker
           selectedValue={selectedId}
-          onValueChange={handleSelect}
+          onValueChange={(itemValue) => setSelectedId(itemValue)}
           style={styles.picker}
         >
-          <Picker.Item label="Choose a transcript..." value={null} />
-          {transcripts.map(item => (
-            <Picker.Item key={item.id} label={item.label} value={item.id} />
+          <Picker.Item label="-- Choose a transcript --" value="" />
+          {transcripts.map(t => (
+            <Picker.Item
+              key={t.transcript_id}
+              label={`${t.user_id} (${t.transcript_id})`}
+              value={t.transcript_id}
+            />
           ))}
         </Picker>
       </View>
 
-      {loading && <ActivityIndicator size="large" color="#fff" style={{ marginTop: 30 }} />}
+      {loading && <ActivityIndicator color="#fff" style={{ marginVertical: 20 }} />}
 
       {result && (
         <View style={styles.resultBox}>
-          <Text style={styles.section}>📝 Transcription:</Text>
-          <Text style={styles.value}>{result.transcription}</Text>
+          <Text style={styles.resultTitle}>Transcription</Text>
+          <Text style={styles.resultText}>{result.transcription}</Text>
 
-          <Text style={styles.section}>😊 Sentiment:</Text>
-          <Text style={styles.value}>{result.sentiment}</Text>
+          <Text style={styles.resultTitle}>Sentiment</Text>
+          <Text style={styles.resultText}>{result.sentiment}</Text>
 
-          <Text style={styles.section}>🔑 Keywords:</Text>
-          <Text style={styles.value}>{result.keywords?.join(', ')}</Text>
+          <Text style={styles.resultTitle}>Keywords</Text>
+          <Text style={styles.resultText}>{(result.keywords || []).join(', ')}</Text>
 
-          <Text style={styles.section}>📚 Summary:</Text>
-          <Text style={styles.value}>{result.summary}</Text>
+          <Text style={styles.resultTitle}>Summary</Text>
+          <Text style={styles.resultText}>{result.summary}</Text>
 
-          <Text style={styles.section}>🏷 Topics:</Text>
-          <Text style={styles.value}>{result.topics?.join(', ')}</Text>
+          <Text style={styles.resultTitle}>Topics</Text>
+          <Text style={styles.resultText}>{(result.topics || []).join(', ')}</Text>
         </View>
       )}
     </ScrollView>
@@ -88,14 +73,14 @@ const ResultViewer = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: '#121212', padding: 20 },
-  title: { fontSize: 22, color: '#fff', fontWeight: 'bold', textAlign: 'center', marginBottom: 20 },
+  container: { flex: 1, backgroundColor: '#121212', padding: 20 },
+  title: { fontSize: 20, fontWeight: 'bold', color: '#fff', marginBottom: 20, textAlign: 'center' },
   label: { color: '#ccc', marginBottom: 10 },
-  dropdown: { backgroundColor: '#1e1e1e', borderRadius: 8, marginBottom: 20 },
+  pickerWrapper: { backgroundColor: '#1e1e1e', borderRadius: 6, marginBottom: 20 },
   picker: { color: '#fff' },
-  resultBox: { marginTop: 20 },
-  section: { fontWeight: 'bold', color: '#fff', marginTop: 15 },
-  value: { color: '#ccc', marginTop: 5 }
+  resultBox: { backgroundColor: '#1e1e1e', borderRadius: 8, padding: 15 },
+  resultTitle: { color: '#fff', fontWeight: 'bold', marginTop: 10 },
+  resultText: { color: '#ccc', marginTop: 5 }
 });
 
 export default ResultViewer;
