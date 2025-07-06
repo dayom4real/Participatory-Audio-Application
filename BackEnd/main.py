@@ -1,236 +1,9 @@
-# from fastapi import FastAPI, UploadFile, File
-# from fastapi.middleware.cors import CORSMiddleware
-# import whisper
-# import shutil
-# import os
-
-# app = FastAPI()
-
-# # Allow CORS for local frontend testing (adjust origins as needed)
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["*"],  # Change to specific domain in production
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
-
-# # Load Whisper model at startup
-# model = whisper.load_model("base")  # You can change to "small", "medium", etc.
-
-# @app.get("/")
-# def read_root():
-#     return {"message": "Whisper transcription API is running"}
-
-# @app.post("/upload-audio")
-# async def upload_audio(file: UploadFile = File(...)):
-#     try:
-#         # Save uploaded file to disk
-#         temp_file = f"temp_{file.filename}"
-#         with open(temp_file, "wb") as buffer:
-#             shutil.copyfileobj(file.file, buffer)
-
-#         # Transcribe audio using Whisper
-#         result = model.transcribe(temp_file)
-#         transcription = result["text"]
-
-#         # Clean up
-#         os.remove(temp_file)
-
-#         return {"transcription": transcription}
-    
-#     except Exception as e:
-#         return {"error": str(e)}
-
-
-# from fastapi import FastAPI, UploadFile, File
-# from fastapi.middleware.cors import CORSMiddleware
-# import whisper
-# import shutil
-# import uuid
-# import os
-
-# app = FastAPI()
-
-# # Enable CORS for frontend access
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["*"],  # Replace with frontend URL in production
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
-
-# model = whisper.load_model("base")  # or "small", "medium", "large"
-
-# @app.post("/upload-audio")
-# async def upload_audio(file: UploadFile = File(...)):
-#     try:
-#         # Save with a unique name
-#         filename = f"temp_{uuid.uuid4().hex}.mp3"
-#         filepath = os.path.join("audio", filename)
-#         os.makedirs("audio", exist_ok=True)
-#         with open(filepath, "wb") as buffer:
-#             shutil.copyfileobj(file.file, buffer)
-
-#         # Transcribe
-#         result = model.transcribe(filepath, task="transcribe")  # Or task="translate"
-#         transcription = result["text"]
-
-#         return {"transcription": transcription}
-
-#     except Exception as e:
-#         return {"error": str(e)}
-
-
-
-
-# from fastapi import FastAPI, File, UploadFile, Form
-# from fastapi.responses import JSONResponse
-# from fastapi.middleware.cors import CORSMiddleware
-# import os
-# import uuid
-# import shutil
-# import whisper
-
-# app = FastAPI()
-
-# # Allow frontend access
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["*"],  # In production, specify allowed origins
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
-
-# # Directory to store uploaded files
-# UPLOAD_DIR = "PCP/BackEnd/uploads"
-# os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-# # 🔁 Load the smaller Whisper model
-# model = whisper.load_model("small")
-
-# @app.post("/upload-audio")
-# async def upload_audio(
-#     file: UploadFile = File(...),
-#     user_id: str = Form(...),
-#     language: str = Form("en")
-# ):
-#     try:
-#         # Generate a unique filename
-#         file_ext = file.filename.split('.')[-1]
-#         temp_filename = f"{uuid.uuid4()}.{file_ext}"
-#         file_path = os.path.join(UPLOAD_DIR, temp_filename)
-
-#         # Save uploaded audio file
-#         with open(file_path, "wb") as buffer:
-#             shutil.copyfileobj(file.file, buffer)
-
-#         # Transcribe using Whisper with language hint
-#         result = model.transcribe(file_path, language=language)
-
-#         return {
-#             "user_id": user_id,
-#             "filename": file.filename,
-#             "transcription": result.get("text", "")
-#         }
-
-#     except Exception as e:
-#         return JSONResponse(status_code=500, content={"error": str(e)})
-
-
-
-
-
-# from fastapi import FastAPI, File, UploadFile, Form
-# from fastapi.responses import JSONResponse
-# from fastapi.middleware.cors import CORSMiddleware
-# import os
-# import uuid
-# import shutil
-# import whisper
-# from googletrans import Translator
-# import traceback
-
-# app = FastAPI()
-
-# # Allow frontend access
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["*"],
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
-
-# UPLOAD_DIR = "PCP/BackEnd/uploads"
-# os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-# # Load Whisper model
-# print("Loading Whisper model...")
-# model = whisper.load_model("small")
-# print("Model loaded.")
-
-# # Initialize Google Translator
-# translator = Translator()
-
-# @app.post("/upload-audio")
-# async def upload_audio(
-#     file: UploadFile = File(...),
-#     user_id: str = Form(...),
-#     language: str = Form("en")
-# ):
-#     try:
-#         # Save uploaded file
-#         file_ext = file.filename.split('.')[-1]
-#         temp_filename = f"{uuid.uuid4()}.{file_ext}"
-#         file_path = os.path.join(UPLOAD_DIR, temp_filename)
-
-#         with open(file_path, "wb") as buffer:
-#             shutil.copyfileobj(file.file, buffer)
-
-#         print(f"[DEBUG] File saved to: {file_path}")
-#         print(f"[DEBUG] Running Whisper transcription...")
-
-#         # Transcribe
-#         result = model.transcribe(file_path, language=language)
-#         print(f"[DEBUG] Transcription result: {result}")
-
-#         transcription = result.get("text", "").strip()
-#         if not transcription:
-#             transcription = "[No transcription detected]"
-        
-#         print(f"[DEBUG] Transcription text: {transcription}")
-
-#         # Translate
-#         print("[DEBUG] Translating...")
-#         translations = {
-#             "French": translator.translate(transcription, dest='fr').text,
-#             "Hausa": translator.translate(transcription, dest='ha').text,
-#             "Yoruba": translator.translate(transcription, dest='yo').text,
-#             "Igbo": translator.translate(transcription, dest='ig').text
-#         }
-#         print(f"[DEBUG] Translations: {translations}")
-
-#         return {
-#             "user_id": user_id,
-#             "filename": file.filename,
-#             "transcription": transcription,
-#             "translations": translations
-#         }
-
-#     except Exception as e:
-#         print("[ERROR] Exception occurred:")
-#         traceback.print_exc()
-#         return JSONResponse(status_code=500, content={"error": str(e)})
-
 import os
 import uuid
 import logging
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
-from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, FileResponse
 from sqlalchemy import create_engine, Column, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -306,8 +79,14 @@ def summarize_text(text: str) -> str:
 
 def detect_topics(text: str) -> str:
     logging.info("Classifying topics")
+
+    if not text or not text.strip():
+        logging.warning("No text provided for topic classification.")
+        return ""
+
     classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
     labels = ["health", "education", "economy", "security", "infrastructure", "governance", "culture", "environment"]
+
     result = classifier(text[:512], candidate_labels=labels)
     return ", ".join([label for label, score in zip(result["labels"], result["scores"]) if score > 0.5])
 
@@ -315,7 +94,7 @@ def detect_emotion(text: str) -> str:
     logging.info("Detecting emotion")
     classifier = pipeline("text-classification", model="j-hartmann/emotion-english-distilroberta-base")
     result = classifier(text[:512])
-    top_emotion = result[0]  # result is always a list of dicts
+    top_emotion = result[0]
     return f"{top_emotion['label']} ({top_emotion['score']:.2f})"
 
 # ========== ROUTES ==========
@@ -392,6 +171,31 @@ def get_analysis_report(transcript_id: int):
     }
     logging.info(f"Fetched analysis report for transcript {transcript_id}")
     return JSONResponse(content=report)
+
+@app.get("/transcripts")
+def list_transcripts():
+    try:
+        db = SessionLocal()
+        transcripts = db.query(Transcript.id, Transcript.user_id).order_by(Transcript.id.desc()).all()
+        return [{"transcript_id": t.id, "user_id": t.user_id} for t in transcripts]
+    except Exception as e:
+        logging.error(f"Error fetching transcript list: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error fetching transcript list")
+
+@app.get("/transcript/{id}/analysis")
+def get_transcript_analysis(id: int):
+    db = SessionLocal()
+    transcript = db.query(Transcript).filter(Transcript.id == id).first()
+    if not transcript:
+        raise HTTPException(status_code=404, detail="Transcript not found")
+    return {
+        "transcription": transcript.text,
+        "summary": transcript.summary,
+        "sentiment": transcript.sentiment,
+        "keywords": transcript.keywords.split(","),
+        "topics": transcript.topics.split(","),
+        "emotion": transcript.emotion,
+    }
 
 @app.get("/")
 def root():
