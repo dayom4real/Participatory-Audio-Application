@@ -5,6 +5,7 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from sqlalchemy import create_engine, Column, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import whisper
@@ -12,10 +13,12 @@ import nltk
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from rake_nltk import Rake
 from transformers import pipeline
+from diarization import diarize_with_hybrid_clustering
 
 # ========== SETUP ==========
 nltk.download("vader_lexicon")
-nltk.download("punkt_tab")
+nltk.download("punkt_tab")  # Kept as you requested
+#nltk.download("punkt")
 nltk.download("stopwords")
 
 UPLOAD_DIR = "uploads"
@@ -32,7 +35,8 @@ app.add_middleware(
 )
 
 # ========== DATABASE ==========
-DATABASE_URL = "postgresql://postgres:topology123@localhost/participatory_db"
+#DATABASE_URL = "postgresql://postgres:topology123@localhost/participatory_db"
+DATABASE_URL = "postgresql://analysis_9dug_user:e4JfSr2L1oGwaLgbSwc3C11txc13NAXj@dpg-d24gq8er433s739709m0-a.oregon-postgres.render.com/analysis_9dug"
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
@@ -49,14 +53,20 @@ class Transcript(Base):
     summary = Column(Text)
     topics = Column(Text)
     emotion = Column(Text)
+    diarization = Column(JSONB)
 
 Base.metadata.create_all(bind=engine)
+
+# ========== GLOBAL MODELS ==========
+whisper_model = whisper.load_model("base")
+summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
+emotion_classifier = pipeline("text-classification", model="j-hartmann/emotion-english-distilroberta-base")
+topic_classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
 
 # ========== UTILITIES ==========
 def transcribe_audio(filepath: str) -> str:
     logging.info(f"Transcribing file: {filepath}")
-    model = whisper.load_model("base")
-    result = model.transcribe(filepath)
+    result = whisper_model.transcribe(filepath)
     return result["text"]
 
 def analyze_sentiment(text: str) -> str:
@@ -73,27 +83,21 @@ def extract_keywords(text: str) -> str:
 
 def summarize_text(text: str) -> str:
     logging.info("Summarizing text")
-    summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
     summary = summarizer(text[:1024])[0]["summary_text"]
     return summary
 
 def detect_topics(text: str) -> str:
     logging.info("Classifying topics")
-
     if not text or not text.strip():
         logging.warning("No text provided for topic classification.")
         return ""
-
-    classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
     labels = ["health", "education", "economy", "security", "infrastructure", "governance", "culture", "environment"]
-
-    result = classifier(text[:512], candidate_labels=labels)
+    result = topic_classifier(text[:512], candidate_labels=labels)
     return ", ".join([label for label, score in zip(result["labels"], result["scores"]) if score > 0.5])
 
 def detect_emotion(text: str) -> str:
     logging.info("Detecting emotion")
-    classifier = pipeline("text-classification", model="j-hartmann/emotion-english-distilroberta-base")
-    result = classifier(text[:512])
+    result = emotion_classifier(text[:512])
     top_emotion = result[0]
     return f"{top_emotion['label']} ({top_emotion['score']:.2f})"
 
@@ -117,6 +121,8 @@ async def upload_audio(file: UploadFile = File(...), user_id: str = Form(...), l
         summary = summarize_text(transcript_text)
         topics = detect_topics(transcript_text)
         emotion = detect_emotion(transcript_text)
+        segments = diarize_with_hybrid_clustering(file_path)
+        
 
         db = SessionLocal()
         transcript = Transcript(
@@ -129,6 +135,7 @@ async def upload_audio(file: UploadFile = File(...), user_id: str = Form(...), l
             summary=summary,
             topics=topics,
             emotion=emotion,
+            diarization=segments
         )
         db.add(transcript)
         db.commit()
@@ -168,6 +175,7 @@ def get_analysis_report(transcript_id: int):
         "keywords": transcript.keywords,
         "topics": transcript.topics,
         "emotion": transcript.emotion,
+        "diarization": transcript.diarization
     }
     logging.info(f"Fetched analysis report for transcript {transcript_id}")
     return JSONResponse(content=report)
@@ -195,7 +203,18 @@ def get_transcript_analysis(id: int):
         "keywords": transcript.keywords.split(","),
         "topics": transcript.topics.split(","),
         "emotion": transcript.emotion,
+        "diarization": transcript.diarization
     }
+
+@app.get("/diarization/{file_name}")
+def get_diarization(file_name: str):
+    file_path = os.path.join("uploads", file_name)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    #segments = diarize_audio(file_path)
+    segments = diarize_with_hybrid_clustering(file_path)
+    return {"segments": segments}
 
 @app.get("/")
 def root():
