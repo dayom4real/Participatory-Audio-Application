@@ -35,8 +35,8 @@ app.add_middleware(
 )
 
 # ========== DATABASE ==========
-#DATABASE_URL = "postgresql://postgres:topology123@localhost/participatory_db"
-DATABASE_URL = "postgresql://analysis_9dug_user:e4JfSr2L1oGwaLgbSwc3C11txc13NAXj@dpg-d24gq8er433s739709m0-a.oregon-postgres.render.com/analysis_9dug"
+
+DATABASE_URL = os.getenv("DATABASE_API_KEY")
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
